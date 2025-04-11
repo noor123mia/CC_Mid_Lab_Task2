@@ -1,72 +1,86 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
 class Program
 {
-    // Define a structure to hold details of each token
+    // Structure to hold token details
     struct Token
     {
-        public string VarName;        // Variable name like a1, b2, etc.
-        public string SpecialSymbol;  // Special symbol(s) found in value
-        public string TokenType;      // Token type (Identifier in this case)
+        public string VarName;         // Variable name that matches criteria
+        public string SpecialSymbol;   // Non-alphanumeric symbols found in the value
+        public string TokenType;       // Type of token (fixed as "Identifier" here)
     }
 
     static void Main()
     {
-        Console.WriteLine("Enter your code (in mini-language):");
-        string input = Console.ReadLine(); // Simulates textbox input
+        Console.WriteLine("Enter your code (you can enter multiple declarations):");
+        string input = Console.ReadLine(); // Read full input line
 
         /*
-         * REGEX Explanation:
-         * ------------------
-         * (var|float)\s+        → Match 'var' or 'float' followed by space(s)
-         * ([abc]\w*\d)          → Variable name:
-         *                          - starts with a, b, or c
-         *                          - can have letters/digits (_ included)
-         *                          - ends with digit
-         * \s*=\s*               → Match '=' with optional surrounding spaces
-         * .*?([\W_]+)           → Non-greedy match of value part, capturing non-alphanumeric symbols (special characters)
-         * ;                     → Ends with a semicolon
+         * Regex Pattern Explanation:
+         * --------------------------
+         * (var|float)                → Match declaration keyword: 'var' or 'float'
+         * \s+                        → Match one or more spaces
+         * ([abc][a-zA-Z0-9_]*\d)     → Match variable name:
+         *                             → starts with 'a', 'b', or 'c'
+         *                             → followed by any number of letters, digits, or underscores
+         *                             → ends with a digit
+         * \s*=\s*                    → Match '=' with optional spaces around it
+         * ([^;]*)                    → Capture value (everything before the semicolon)
+         * ;                          → End of statement
          */
-        string pattern = @"(var|float)\s+([abc]\w*\d)\s*=\s*.*?([\W_]+);";
+        string pattern = @"(var|float)\s+([abc][a-zA-Z0-9_]*\d)\s*=\s*([^;]*);";
+        MatchCollection matches = Regex.Matches(input, pattern); // Apply regex to input
 
-        // Find all matches in the input string
-        MatchCollection matches = Regex.Matches(input, pattern);
+        List<Token> tokens = new List<Token>(); // List to store valid tokens
 
-        // List to store extracted tokens
-        List<Token> tokens = new List<Token>();
-
-        // Iterate over each match and extract info
+        // Loop through each matched declaration
         foreach (Match match in matches)
         {
-            string varName = match.Groups[2].Value;       // e.g., a1 or b2
-            string specialSymbol = match.Groups[3].Value; // e.g., @ or $$
+            string varName = match.Groups[2].Value;      // Extract variable name
+            string valuePart = match.Groups[3].Value;    // Extract value part
 
-            // Add the extracted token to the list
-            tokens.Add(new Token
+            // Initialize container for special characters
+            string specialChars = "";
+
+            // Loop through value to find non-alphanumeric characters
+            foreach (char ch in valuePart)
             {
-                VarName = varName,
-                SpecialSymbol = specialSymbol,
-                TokenType = "Identifier"
-            });
+                // Check if the character is not a letter, digit, or whitespace
+                if (!char.IsLetterOrDigit(ch) && !char.IsWhiteSpace(ch))
+                {
+                    specialChars += ch; // Append special character
+                }
+            }
+
+            // Only add token if special characters are found in the value
+            if (!string.IsNullOrEmpty(specialChars))
+            {
+                tokens.Add(new Token
+                {
+                    VarName = varName,
+                    SpecialSymbol = specialChars,
+                    TokenType = "Identifier"
+                });
+            }
         }
 
-        // Print table header
-        Console.WriteLine("\n{0,-10} | {1,-15} | {2}", "VarName", "SpecialSymbol", "Token Type");
-        Console.WriteLine(new string('-', 45));
+        // Output table header
+        Console.WriteLine("\n{0,-15} | {1,-20} | {2}", "VarName", "SpecialSymbol", "Token Type");
+        Console.WriteLine(new string('-', 55));
 
-        // If no tokens found, show message
+        // If no valid tokens were found, display appropriate message
         if (tokens.Count == 0)
         {
             Console.WriteLine("No valid tokens found.");
         }
         else
         {
-            // Display all tokens in formatted output
+            // Print each valid token in tabular format
             foreach (var token in tokens)
             {
-                Console.WriteLine($"{token.VarName,-10} | {token.SpecialSymbol,-15} | {token.TokenType}");
+                Console.WriteLine($"{token.VarName,-15} | {token.SpecialSymbol,-20} | {token.TokenType}");
             }
         }
     }
